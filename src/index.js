@@ -1,11 +1,14 @@
-'use strict';
+const aws = require('aws-sdk');
+const kms = new aws.KMS({ apiVersion: '2014-11-01' });
 
-var aws = require('aws-sdk');
-var kms = new aws.KMS({ apiVersion: '2014-11-01' });
+module.exports = {
+    validate,
+    create,
+    update,
+    delete: deleteFn
+};
 
-var pub = {};
-
-pub.validate = function (event) {
+function validate(event) {
     if (!event.ResourceProperties.GranteePrincipal) {
         throw new Error('Missing required property GranteePrincipal');
     }
@@ -18,50 +21,49 @@ pub.validate = function (event) {
     if (event.ResourceProperties.Operations.length === 0) {
         throw new Error('Operations cannot be empty');
     }
-};
+}
 
-pub.create = function (event, _context, callback) {
+function create(event, _context, callback) {
     delete event.ResourceProperties.ServiceToken;
-    var params = event.ResourceProperties;
+    const params = event.ResourceProperties;
     kms.createGrant(params, function (error, kmsResponse) {
         if (error) {
             return callback(error);
         }
-        var data = {
+
+        const data = {
             physicalResourceId: kmsResponse.GrantId,
             GrantToken: kmsResponse.GrantToken
         };
         callback(null, data);
     });
-};
+}
 
-pub.update = function (event, context, callback) {
+function update(event, context, callback) {
     if (!requiresReplacement(event)) {
-        return pub.create(event, context, callback);
+        return create(event, context, callback);
     }
 
-    pub.delete(event, context, function (error) {
+    deleteFn(event, context, function (error) {
         if (error) {
             return callback(error);
         }
-        pub.create(event, context, callback);
+        create(event, context, callback);
     });
-};
+}
 
-pub.delete = function (event, _context, callback) {
+function deleteFn(event, _context, callback) {
     if (/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}/.test(event.PhysicalResourceId)) {
         return callback();
     }
-    var params = {
+    const params = {
         GrantId: event.PhysicalResourceId,
         KeyId: event.ResourceProperties.KeyId
     };
-    kms.revokeGrant(params, function(error) {
+    kms.revokeGrant(params, function (error) {
         return callback(error);
     });
-};
-
-module.exports = pub;
+}
 
 function requiresReplacement(event) {
     return !event.ResourceProperties.Name ||

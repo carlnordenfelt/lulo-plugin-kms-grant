@@ -1,9 +1,18 @@
 {
-    "baseConfig": true,
+    "extends": "eslint:recommended",
     "env": {
+        "es6": true,
         "node": true
     },
+    "parserOptions": {
+        "ecmaVersion": 2018,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "impliedStrict": true
+        }
+    },
     "globals": {
+        "Promise": true,
         "it": true,
         "describe": true,
         "after": true,
@@ -29,13 +38,14 @@
         "consistent-return": 0,
         "curly": 1,
         "default-case": 2,
+        "no-case-declarations": 0,
         "dot-location": ["error", "property"],
         "dot-notation": 1,
         "guard-for-in": 2,
         "no-caller": 2,
         "no-else-return": 1,
         "max-statements": [1, 20],
-
+        "semi": ["error", "always"],
         "no-unused-vars": [2, { "args": "all", "argsIgnorePattern": "^_" }],   // Allow unused vars if the variable name starts with underscore
         "indent": [1, 4, { "SwitchCase": 1 }],  // Use 4 spaces for indentation ('case' should be indented 1 level)
         "max-len": [1, 150, 4], // Allow lines to be up to 150 characters (count tab as 4 chars)
@@ -45,7 +55,7 @@
         "max-params": [1, 4],
         "strict": [2, "global"],  // Enforce 'use strict'
 
-        "filenames/match-regex": [2, "^[-a-z0-9]+$", true],
+        "filenames/match-regex": [2, "^[-a-z0-9.]+$", true],
         "import/no-extraneous-dependencies": [2, { "devDependencies": true, "optionalDependencies": false }]
     }
 }

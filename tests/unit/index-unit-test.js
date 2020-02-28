@@ -1,14 +1,12 @@
-'use strict';
-
-var expect = require('chai').expect;
-var mockery = require('mockery');
-var sinon = require('sinon');
+const expect = require('chai').expect;
+const mockery = require('mockery');
+const sinon = require('sinon');
 
 describe('Index unit tests', function () {
-    var subject;
-    var createGrantStub = sinon.stub();
-    var revokeGrantStub = sinon.stub();
-    var event;
+    let subject;
+    const createGrantStub = sinon.stub();
+    const revokeGrantStub = sinon.stub();
+    let event;
 
     before(function () {
         mockery.enable({
@@ -16,7 +14,7 @@ describe('Index unit tests', function () {
             warnOnUnregistered: false
         });
 
-        var awsSdkStub = {
+        const awsSdkStub = {
             KMS: function () {
                 this.createGrant = createGrantStub;
                 this.revokeGrant = revokeGrantStub;
@@ -27,9 +25,9 @@ describe('Index unit tests', function () {
         subject = require('../../src/index');
     });
     beforeEach(function () {
-        createGrantStub.reset().resetBehavior();
+        createGrantStub.reset();
         createGrantStub.yields(undefined, { GrantToken: 'GrantToken', GrantId: 'GrantId' });
-        revokeGrantStub.reset().resetBehavior();
+        revokeGrantStub.reset();
         revokeGrantStub.yields();
         event = {
             ResourceProperties: {
@@ -107,7 +105,7 @@ describe('Index unit tests', function () {
     });
 
     describe('update', function () {
-        var updateEvent;
+        let updateEvent;
         beforeEach(function () {
             updateEvent = JSON.parse(JSON.stringify(event));
             updateEvent.OldResourceProperties = JSON.parse(JSON.stringify(updateEvent.ResourceProperties));
