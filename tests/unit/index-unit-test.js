@@ -6,35 +6,34 @@ describe('Index unit tests', function () {
     let subject;
     const createGrantStub = sinon.stub();
     const revokeGrantStub = sinon.stub();
+    const retireGrantStub = sinon.stub();
     let event;
 
     before(function () {
-        mockery.enable({
-            useCleanCache: true,
-            warnOnUnregistered: false
-        });
+        mockery.enable({ useCleanCache: true, warnOnUnregistered: false });
 
         const awsSdkStub = {
             KMS: function () {
                 this.createGrant = createGrantStub;
                 this.revokeGrant = revokeGrantStub;
-            }
+                this.retireGrant = retireGrantStub;
+            },
         };
 
         mockery.registerMock('aws-sdk', awsSdkStub);
         subject = require('../../src/index');
     });
     beforeEach(function () {
-        createGrantStub.reset();
+        sinon.reset();
         createGrantStub.yields(undefined, { GrantToken: 'GrantToken', GrantId: 'GrantId' });
-        revokeGrantStub.reset();
         revokeGrantStub.yields();
+        retireGrantStub.yields();
         event = {
             ResourceProperties: {
                 GranteePrincipal: 'GranteePrincipal',
                 KeyId: 'KeyId',
-                Operations: ['Encrypt', 'Decrypt']
-            }
+                Operations: ['Encrypt', 'Decrypt'],
+            },
         };
     });
     after(function () {
@@ -49,33 +48,41 @@ describe('Index unit tests', function () {
         });
         it('should fail if GranteePrincipal is not set', function (done) {
             delete event.ResourceProperties.GranteePrincipal;
-            function fn () {
+
+            function fn() {
                 subject.validate(event);
             }
+
             expect(fn).to.throw(/Missing required property GranteePrincipal/);
             done();
         });
         it('should fail if KeyId is not set', function (done) {
             delete event.ResourceProperties.KeyId;
-            function fn () {
+
+            function fn() {
                 subject.validate(event);
             }
+
             expect(fn).to.throw(/Missing required property KeyId/);
             done();
         });
         it('should fail if Operations is not set', function (done) {
             delete event.ResourceProperties.Operations;
-            function fn () {
+
+            function fn() {
                 subject.validate(event);
             }
+
             expect(fn).to.throw(/Missing required property Operations/);
             done();
         });
         it('should fail if Operations is empty', function (done) {
             event.ResourceProperties.Operations = [];
-            function fn () {
+
+            function fn() {
                 subject.validate(event);
             }
+
             expect(fn).to.throw(/Operations cannot be empty/);
             done();
         });
@@ -139,33 +146,48 @@ describe('Index unit tests', function () {
                 done();
             });
         });
-        it('should fail due to revokeGrant error', function (done) {
+        it('should fail due to revokeGrant/retireGrant error', function (done) {
             revokeGrantStub.yields('revokeGrant');
+            retireGrantStub.yields('retireGrant');
             subject.update(event, {}, function (error) {
-                expect(error).to.equal('revokeGrant');
+                expect(error).to.equal('retireGrant');
                 expect(createGrantStub.called).to.equal(false);
                 expect(revokeGrantStub.calledOnce).to.equal(true);
+                expect(retireGrantStub.calledOnce).to.equal(true);
                 done();
             });
         });
     });
 
     describe('delete', function () {
-        it('should succeed', function (done) {
+        it('revokeGrant succeed', function (done) {
             event.PhysicalResourceId = '12345678900987654321';
             subject.delete(event, {}, function (error) {
                 expect(error).to.equal(undefined);
                 expect(createGrantStub.called).to.equal(false);
                 expect(revokeGrantStub.calledOnce).to.equal(true);
+                expect(retireGrantStub.called).to.equal(false);
                 done();
             });
         });
-        it('should fail due to revokeGrant error', function (done) {
+        it('should succeed if retireGrant succeeds', function (done) {
             revokeGrantStub.yields('revokeGrant');
             subject.delete(event, {}, function (error) {
-                expect(error).to.equal('revokeGrant');
+                expect(error).to.equal(undefined);
                 expect(createGrantStub.called).to.equal(false);
                 expect(revokeGrantStub.calledOnce).to.equal(true);
+                expect(retireGrantStub.calledOnce).to.equal(true);
+                done();
+            });
+        });
+        it('should fail if both revokeGrant and retireGrant fails', function (done) {
+            revokeGrantStub.yields('revokeGrant');
+            retireGrantStub.yields('retireGrant');
+            subject.delete(event, {}, function (error) {
+                expect(error).to.equal('retireGrant');
+                expect(createGrantStub.called).to.equal(false);
+                expect(revokeGrantStub.calledOnce).to.equal(true);
+                expect(retireGrantStub.calledOnce).to.equal(true);
                 done();
             });
         });

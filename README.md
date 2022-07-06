@@ -42,11 +42,16 @@ The Custom Resource Lambda requires the following permissions for this plugin to
    "Effect": "Allow",
    "Action": [
        "kms:CreateGrant",
-       "kms:RevokeGrant"
+       "kms:RevokeGrant",
+       "kms:RetireGrant"
    ],
    "Resource": "*"
 }
 ```
+Principals can have RevokeGrant or RetireGrant permissions, or both.<br>
+On delete, the plugin will attempt to RevokeGrant the grant and if that fails it will
+optimistically attempt to RetireGrant the grant instead.<br>
+If both these operations fail, the delete operation will fail, and the grant will remain.
 
 ## License
 [The MIT License (MIT)](/LICENSE)

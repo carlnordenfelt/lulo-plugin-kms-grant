@@ -60,8 +60,14 @@ function deleteFn(event, _context, callback) {
         GrantId: event.PhysicalResourceId,
         KeyId: event.ResourceProperties.KeyId
     };
-    kms.revokeGrant(params, function (error) {
-        return callback(error);
+    kms.revokeGrant(params, function (revokeError) {
+        if (revokeError) {
+            // Optimistically attempt to retire the grant instead
+            kms.retireGrant(params, function (retireError) {
+                return callback(retireError);
+            });
+        }
+        return callback(revokeError);
     });
 }
 
